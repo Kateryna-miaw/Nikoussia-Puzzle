@@ -4,6 +4,9 @@ Un puzzle de 256 pièces construit avec Streamlit. L'image est découpée en gri
 
 C'est un jeu complet avec système de combo, indices, aimantation magnétique, bande-son, et un profiler de debug intégré.
 
+Vous pouvez le retrouver sur : 
+https://nikoussia-puzzle-cgxnentvbuc9rtswdfnm5s.streamlit.app
+
 ---
 
 ## De quoi il s'agit
