@@ -1,6 +1,6 @@
 # Nikoussia Puzzle
 
-Un puzzle de 256 pièces construit avec Streamlit. L'image est découpée en grille 16×16, les pièces sont mélangées et tournées aléatoirement, et il faut tout remettre en place par glisser-déposer. L'image du puzzle, c'est Nikoussia, ma vraie peluche.
+Un puzzle de 256 pièces construit avec Streamlit. L'image est découpée en grille 16×16, les pièces sont mélangées et tournées aléatoirement, et il faut tout remettre en place par glisser-déposer. L'image du puzzle, c'est Nikoussia, mon vrai chat capricieux.
 
 C'est un jeu complet avec système de combo, indices, aimantation magnétique, bande-son, et un profiler de debug intégré.
 
