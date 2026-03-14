@@ -480,21 +480,6 @@ function generateEdges(){
   for(let r=0;r<GRID;r++){vEdges[r]=[];for(let c=0;c<GRID-1;c++)vEdges[r][c]=Math.random()<.5?1:-1;}
 }
 
-/* ─────────────────────────────────────────────
-   EDGE DRAWING — completely rewritten so that
-   adjacent pieces share *exactly* the same cubic
-   Bézier curve. The trick: always parameterise
-   the curve from the cell with the smaller index
-   and, when the neighbour needs the same edge,
-   just traverse the same control points in
-   reverse order.
-   ───────────────────────────────────────────── */
-
-/*  Draw one edge of a puzzle piece.
-    (x0,y0)→(x1,y1) is the straight baseline.
-    `dir`  = 0 → straight (border edge)
-           = +1 → tab protrudes to the LEFT of the travel direction
-           = -1 → tab protrudes to the RIGHT                       */
 function drawPuzzleEdge(c, x0, y0, x1, y1, dir){
   if(!dir){ c.lineTo(x1,y1); return; }
 
@@ -502,31 +487,25 @@ function drawPuzzleEdge(c, x0, y0, x1, y1, dir){
   const len = Math.sqrt(dx*dx + dy*dy);
   if(len < 0.001){ c.lineTo(x1,y1); return; }
 
-  // unit tangent & unit normal (normal points LEFT of travel when dir=+1)
   const tx = dx/len, ty = dy/len;
   const nx = -ty * dir, ny = tx * dir;
 
-  const tabH = len * TAB_SIZE;   // how far the tab sticks out
-  const neckW = len * 0.08;      // half-width of the neck
-  const headW = len * 0.12;      // extra half-width of the bulge
+  const tabH = len * TAB_SIZE;
+  const neckW = len * 0.08;
+  const headW = len * 0.12;
 
-  // Key points along the baseline
   const neck0 = 0.35, neck1 = 0.65, mid = 0.5;
 
-  // Neck entry / exit
   const n0x = x0 + dx*neck0, n0y = y0 + dy*neck0;
   const n1x = x0 + dx*neck1, n1y = y0 + dy*neck1;
 
-  // Neck inward pinch
   const ni0x = n0x + nx*(-tabH*0.10), ni0y = n0y + ny*(-tabH*0.10);
   const ni1x = n1x + nx*(-tabH*0.10), ni1y = n1y + ny*(-tabH*0.10);
 
-  // Bulge control points
   const bulgeOut = tabH * 1.05;
   const cp0x = n0x + nx*bulgeOut - tx*headW, cp0y = n0y + ny*bulgeOut - ty*headW;
   const cp1x = n1x + nx*bulgeOut + tx*headW, cp1y = n1y + ny*bulgeOut + ty*headW;
 
-  // Tip
   const tipx = x0 + dx*mid + nx*tabH, tipy = y0 + dy*mid + ny*tabH;
 
   c.lineTo(n0x, n0y);
@@ -540,16 +519,12 @@ function drawPuzzleEdge(c, x0, y0, x1, y1, dir){
 function createPiecePath(c, row, col, px, py, cw, ch){
   c.beginPath();
   c.moveTo(px, py);
-  // Top edge (left → right)
   const topDir = row > 0 ? hEdges[row-1][col] : 0;
   drawPuzzleEdge(c, px, py, px+cw, py, topDir);
-  // Right edge (top → bottom)
   const rightDir = col < GRID-1 ? vEdges[row][col] : 0;
   drawPuzzleEdge(c, px+cw, py, px+cw, py+ch, rightDir);
-  // Bottom edge (right → left)  — negate so the curve mirrors the top of the row below
   const bottomDir = row < GRID-1 ? -hEdges[row][col] : 0;
   drawPuzzleEdge(c, px+cw, py+ch, px, py+ch, bottomDir);
-  // Left edge (bottom → top) — negate so it mirrors the right of the column to the left
   const leftDir = col > 0 ? -vEdges[row][col-1] : 0;
   drawPuzzleEdge(c, px, py+ch, px, py, leftDir);
   c.closePath();
@@ -607,24 +582,20 @@ function drawPieceThumb(cvs,piece,size,pad){
   const t=cvs.getContext('2d');t.clearRect(0,0,cvs.width,cvs.height);
   const margin = TAB_SIZE * size * 1.2;
 
-  // Shadow
   t.save();t.translate(cvs.width/2,cvs.height/2);t.rotate(piece.rotation*Math.PI/180);t.translate(-cvs.width/2,-cvs.height/2);
   t.translate(1.5,2);createPiecePath(t,piece.row,piece.col,pad,pad,size,size);t.fillStyle='rgba(40,10,50,0.2)';t.fill();t.restore();
 
-  // Clipped image
   t.save();t.translate(cvs.width/2,cvs.height/2);t.rotate(piece.rotation*Math.PI/180);t.translate(-cvs.width/2,-cvs.height/2);
   createPiecePath(t,piece.row,piece.col,pad,pad,size,size);t.clip();
   const sx=piece.col*(img.width/GRID),sy=piece.row*(img.height/GRID),sw=img.width/GRID,sh=img.height/GRID;
   const sm=TAB_SIZE*Math.max(sw,sh)*1.2;
   t.drawImage(img, sx-sm, sy-sm, sw+sm*2, sh+sm*2,
                     pad-margin, pad-margin, size+margin*2, size+margin*2);
-  // Bevel
   createPiecePath(t,piece.row,piece.col,pad,pad,size,size);
   const bv=t.createLinearGradient(pad,pad,pad+size,pad+size);
   bv.addColorStop(0,'rgba(255,255,255,0.2)');bv.addColorStop(.3,'rgba(255,255,255,0.04)');bv.addColorStop(.6,'transparent');bv.addColorStop(1,'rgba(40,10,50,0.12)');
   t.fillStyle=bv;t.fill();t.restore();
 
-  // Stroke
   t.save();t.translate(cvs.width/2,cvs.height/2);t.rotate(piece.rotation*Math.PI/180);t.translate(-cvs.width/2,-cvs.height/2);
   createPiecePath(t,piece.row,piece.col,pad,pad,size,size);t.strokeStyle='rgba(60,20,50,0.18)';t.lineWidth=1.8;t.stroke();
   createPiecePath(t,piece.row,piece.col,pad,pad,size,size);t.strokeStyle=selectedPieceId===piece.id?'#E8679A':'rgba(255,255,255,0.12)';t.lineWidth=selectedPieceId===piece.id?2:.7;t.stroke();t.restore();
@@ -635,7 +606,6 @@ function drawPieceOnBoard(piece){
   const py = boardY + piece.row * cellH;
   const margin = TAB_SIZE * cellW * 1.2;
 
-  // Shadow
   ctx.save();
   ctx.translate(1.5, 2);
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
@@ -643,7 +613,6 @@ function drawPieceOnBoard(piece){
   ctx.fill();
   ctx.restore();
 
-  // Clipped image
   ctx.save();
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
   ctx.clip();
@@ -655,7 +624,6 @@ function drawPieceOnBoard(piece){
   ctx.drawImage(img, sx - sm, sy - sm, sw + sm * 2, sh + sm * 2,
                      px - margin, py - margin, cellW + margin * 2, cellH + margin * 2);
 
-  // Bevel overlay
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
   const bevel = ctx.createLinearGradient(px, py, px + cellW, py + cellH);
   bevel.addColorStop(0, 'rgba(255,255,255,0.18)');
@@ -666,7 +634,6 @@ function drawPieceOnBoard(piece){
   ctx.fill();
   ctx.restore();
 
-  // Subtle outline
   ctx.save();
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
   ctx.strokeStyle = 'rgba(184,160,214,0.12)';
@@ -683,7 +650,6 @@ function drawPieceOnCanvas(piece){
   const lift = isDrag ? 1.04 : 1;
   const sDist = isDrag ? 6 : 3;
 
-  // Shadow
   ctx.save();
   ctx.translate(px+cellW/2, py+cellH/2); ctx.scale(lift,lift); ctx.rotate(piece.rotation*Math.PI/180); ctx.translate(-(px+cellW/2),-(py+cellH/2));
   ctx.translate(sDist, sDist+1);
@@ -694,7 +660,6 @@ function drawPieceOnCanvas(piece){
   ctx.filter = 'none';
   ctx.restore();
 
-  // Inner shadow
   ctx.save();
   ctx.translate(px+cellW/2, py+cellH/2); ctx.scale(lift,lift); ctx.rotate(piece.rotation*Math.PI/180); ctx.translate(-(px+cellW/2),-(py+cellH/2));
   ctx.translate(1, 2);
@@ -703,7 +668,6 @@ function drawPieceOnCanvas(piece){
   ctx.fill();
   ctx.restore();
 
-  // Clipped image
   ctx.save();
   ctx.translate(px+cellW/2, py+cellH/2); ctx.scale(lift,lift); ctx.rotate(piece.rotation*Math.PI/180); ctx.translate(-(px+cellW/2),-(py+cellH/2));
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
@@ -714,7 +678,6 @@ function drawPieceOnCanvas(piece){
   ctx.drawImage(img, sx-sm, sy-sm, sw+sm*2, sh+sm*2,
                      px-margin, py-margin, cellW+margin*2, cellH+margin*2);
 
-  // Bevel + specular
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
   const bevel = ctx.createLinearGradient(px-margin, py-margin, px+cellW+margin, py+cellH+margin);
   bevel.addColorStop(0,'rgba(255,255,255,0.22)'); bevel.addColorStop(.25,'rgba(255,255,255,0.06)');
@@ -725,7 +688,6 @@ function drawPieceOnCanvas(piece){
   ctx.fillStyle = spec; ctx.fill();
   ctx.restore();
 
-  // Stroke
   ctx.save();
   ctx.translate(px+cellW/2, py+cellH/2); ctx.scale(lift,lift); ctx.rotate(piece.rotation*Math.PI/180); ctx.translate(-(px+cellW/2),-(py+cellH/2));
   createPiecePath(ctx, piece.row, piece.col, px, py, cellW, cellH);
@@ -770,7 +732,6 @@ function render(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const br=8;
 
-  // Board background & grid
   ctx.save();ctx.fillStyle='rgba(184,160,214,0.04)';ctx.beginPath();
   ctx.moveTo(boardX-4+br,boardY-4);ctx.lineTo(boardX+boardW+4-br,boardY-4);ctx.quadraticCurveTo(boardX+boardW+4,boardY-4,boardX+boardW+4,boardY-4+br);ctx.lineTo(boardX+boardW+4,boardY+boardH+4-br);ctx.quadraticCurveTo(boardX+boardW+4,boardY+boardH+4,boardX+boardW+4-br,boardY+boardH+4);ctx.lineTo(boardX-4+br,boardY+boardH+4);ctx.quadraticCurveTo(boardX-4,boardY+boardH+4,boardX-4,boardY+boardH+4-br);ctx.lineTo(boardX-4,boardY-4+br);ctx.quadraticCurveTo(boardX-4,boardY-4,boardX-4+br,boardY-4);ctx.fill();
   ctx.strokeStyle='rgba(184,160,214,0.06)';ctx.lineWidth=.5;
